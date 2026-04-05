@@ -1,0 +1,16 @@
+{
+  "name": "NEXA ÉDUCATION & IA",
+  "short_name": "NEXA",
+  "description": "Assistant intelligent pour la 9ème année et plus",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e1117",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5968/5968282.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
