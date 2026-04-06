@@ -1,122 +1,145 @@
-from flask import Flask, render_template_string, request, session, redirect, url_for
-import datetime
+import streamlit as st
+from groq import Groq
+from gtts import gTTS
+import os
+import base64
 
-app = Flask(__name__)
-app.secret_key = "l_tigers_2026_secret" # Sécurité pour les sessions
+# --- CONFIGURATION API GROQ ---
+client = Groq(api_key="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")
 
-# --- BASE DE DONNÉES DES ÉLÈVES ---
+# --- CONFIGURATION DE LA PAGE ---
+st.set_page_config(page_title="NEXA SUPRÊME +", page_icon="N", layout="wide")
 
-# --- BASE DE DONNÉES DES UTILISATEURS ---
-UTILISATEURS = {
-    "karl": "lion",           # Ton identifiant est 'karl', ton mot de passe est 'lion'
-    "eleve": "reussite",      # Un compte pour tes futurs élèves
-    "marie": "maman"          # Un compte pour ta mère avec un mot de passe simple
-}
-
-
-# --- SAVOIR ENCYCLOPÉDIQUE DE NEXA ---
-SAVOIR = {
-    "maths": "L'Algèbre (x,y) et la Géométrie (formes) sont les piliers de l'école.",
-    "physique": "La physique étudie la matière et l'énergie (Newton, Archimède, Einstein).",
-    "biologie": "Science de la vie : étude des cellules, de l'ADN et des écosystèmes.",
-    "examen": "Tes examens de 9ème année : du 6 au 9 juillet 2026. Prépare-toi !",
-    "haiti": "Capitale : Port-au-Prince. Gouvernance : Conseil de Transition (CPT).",
-    "kreyòl": "Onè respè ! Mwen kapab pale kreyòl pou ede pèp la avanse.",
-    "english": "Hello! I can help you master English for international business."
-}
-
-# --- INTERFACE DESIGN (HTML & CSS) ---
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>NEXA - EDUTECH WORLD GE</title>
-    <style>
-        :root { --gold: #ffcc00; --dark: #121212; --card: #1e1e1e; }
-        body { font-family: 'Poppins', sans-serif; background: var(--dark); color: white; margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .container { background: var(--card); padding: 40px; border-radius: 20px; border: 1px solid var(--gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5); width: 100%; max-width: 400px; text-align: center; }
-        h1 { color: var(--gold); margin-bottom: 10px; font-size: 2em; }
-        p.subtitle { color: #888; margin-bottom: 30px; font-size: 0.9em; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #252525; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: var(--gold); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 204, 0, 0.3); }
-        .reponse-box { margin-top: 25px; padding: 15px; background: #252525; border-left: 4px solid var(--gold); text-align: left; border-radius: 5px; }
-        .error { color: #ff4444; font-size: 0.8em; margin-top: 10px; }
-        .logout { display: block; margin-top: 20px; color: #555; text-decoration: none; font-size: 0.8em; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>NEXA v6.0</h1>
-        <p class="subtitle">L TIGERS ORGANISATION - EDUTECH WORLD</p>
-
-        {% if not session.get('user') %}
-            <form method="POST" action="/login">
-                <input type="text" name="username" placeholder="Identifiant" required>
-                <input type="password" name="password" placeholder="Mot de passe" required>
-                <button type="submit">ACCÉDER AU SYSTÈME</button>
-            </form>
-            {% if erreur %}<p class="error">{{ erreur }}</p>{% endif %}
-        {% else %}
-            <p>Content de vous revoir, <strong>{{ session['user']|capitalize }}</strong></p>
-            <form method="POST" action="/ask">
-                <input type="text" name="question" placeholder="Quelle est votre question ?" required>
-                <button type="submit">INTERROGER L'IA</button>
-            </form>
-
-            {% if reponse %}
-                <div class="reponse-box">
-                    <small style="color: var(--gold);">RÉPONSE NEXA :</small><br>
-                    {{ reponse }}
-                </div>
-            {% endif %}
-
-            <a href="/logout" class="logout">Se déconnecter</a>
-        {% endif %}
-    </div>
-</body>
-</html>
-"""
-
-@app.route("/")
-def index():
-    return render_template_string(HTML_TEMPLATE)
-
-@app.route("/login", methods=["POST"])
-def login():
-    user = request.form.get("username").lower().strip()
-    pw = request.form.get("password")
-    if user in UTILISATEURS and UTILISATEURS[user] == pw:
-        session['user'] = user
-        return redirect(url_for('index'))
-    return render_template_string(HTML_TEMPLATE, erreur="Accès refusé. Identifiants invalides.")
-
-@app.route("/ask", methods=["POST"])
-def ask():
-    if not session.get('user'): return redirect(url_for('index'))
-    entree = request.form.get("question").lower().strip()
-    
-    reponse = "Sujet non répertorié. Nos ingénieurs travaillent sur cette mise à jour."
-    
-    # Recherche dans le savoir
-    for cle, detail in SAVOIR.items():
-        if cle in entree:
-            reponse = detail
-            break
-            
-    # Moteur de calcul automatique
+# --- FONCTION VOIX (TTS) ---
+def parler(texte):
     try:
-        if not any(cle in entree for cle in SAVOIR):
-            reponse = f"Résultat du calcul : {eval(entree)}"
-    except: pass
+        tts = gTTS(text=texte, lang='fr')
+        tts.save("response.mp3")
+        with open("response.mp3", "rb") as f:
+            data = f.read()
+            b64 = base64.b64encode(data).decode()
+            md = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}">'
+            st.markdown(md, unsafe_allow_html=True)
+        os.remove("response.mp3")
+    except:
+        st.error("Erreur vocale.")
+
+# --- INITIALISATION ---
+if "premium" not in st.session_state:
+    st.session_state.premium = False
+if "user_count" not in st.session_state:
+    st.session_state.user_count = 412
+
+# --- STYLE CSS ---
+st.markdown("""
+    <style>
+    .main-logo {
+        font-size: 130px;
+        font-weight: 900;
+        background: linear-gradient(45deg, #1e3a8a, #3b82f6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        margin-top: -50px;
+    }
+    .creator-tag {
+        text-align: center;
+        font-weight: bold;
+        color: #1e40af;
+        margin-bottom: 20px;
+    }
+    .lock-box {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid #f5c6cb;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- BARRE LATÉRALE (PAIEMENT & ADMIN) ---
+with st.sidebar:
+    st.markdown("<h1 style='text-align: center;'>N</h1>", unsafe_allow_html=True)
+    st.write(f"*PDG :* GUERRIER ALEJANDRO KARL")
+    st.write(f"*École :* IGJ")
     
-    return render_template_string(HTML_TEMPLATE, reponse=reponse)
+    st.divider()
 
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for('index'))
+    # SECTION ABONNEMENT
+    st.subheader("🚀 NEXA SUPRÊME +")
+    st.info("💎 *Tarif :* 250 HTG / 3 Mois")
+    method = st.selectbox("Payer par :", ["Sélectionner", "Digicel MonCash", "Natcom Natcash"])
+    
+    if method == "Digicel MonCash":
+        st.success("💰 *MonCash* : +509 4769-2489")
+    elif method == "Natcom Natcash":
+        st.success("💰 *Natcash* : +509 4208-7977")
+    
+    if method != "Sélectionner":
+        st.write("📩 Envoyez le reçu pour activer la Vidéo/Photo avancée.")
+    
+    st.divider()
 
-if __name__ == "__main__":
- app.run(host='0.0.0.0', port=10000
+    # ADMIN PDG
+    pwd = st.text_input("Code PDG", type="password")
+    if pwd == "1234":
+        st.success("Mode Admin")
+        st.metric("Total Users", st.session_state.user_count)
+        if st.button("Activer SUPRÊME +"):
+            st.session_state.premium = True
+            st.rerun()
+
+# --- INTERFACE PRINCIPALE ---
+st.markdown("<div class='main-logo'>N</div>", unsafe_allow_html=True)
+st.markdown("<div class='creator-tag'>CRÉATEUR : GUERRIER ALEJANDRO KARL</div>", unsafe_allow_html=True)
+
+# ZONE LABORATOIRE (PHOTO & VIDÉO)
+st.subheader("🧪 NEXA Lab (Photo & Vidéo)")
+col_p, col_v = st.columns(2)
+
+with col_p:
+    file_photo = st.file_uploader("📤 Envoyer une Photo", type=['png', 'jpg', 'jpeg'])
+
+with col_v:
+    file_video = st.file_uploader("📤 Envoyer une Vidéo de référence", type=['mp4', 'mov'])
+
+if st.button("🪄 Lancer la fusion IA"):
+    if not st.session_state.premium:
+        st.markdown("<div class='lock-box'>🔒 La fusion Photo/Vidéo est réservée aux membres SUPRÊME +. Payez 250 HTG pour débloquer.</div>", unsafe_allow_html=True)
+    elif file_photo and file_video:
+        st.success("⚡ Traitement en cours... NEXA anime votre photo selon le mouvement de la vidéo !")
+        # Ici on appelle normalement une API de vidéo comme Runway ou Replicate
+    else:
+        st.warning("Veuillez envoyer une photo ET une vidéo.")
+
+st.divider()
+
+# --- CHAT & VOIX ---
+audio_on = st.toggle("Activer la voix de NEXA")
+if prompt := st.chat_input("Posez une question..."):
+    st.session_state.user_count += 1
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    with st.chat_message("assistant"):
+        # L'IA connaît toute ta famille et IGJ
+        sys_info = """
+        Tu es NEXA. Créateur: GUERRIER ALEJANDRO KARL. École: IGJ.
+        Mère: Abellard Marie Leyande. Père: Marc Joël Guerrier.
+        Frères: Stenley Néré David, Yankee Klervens Guerrier.
+        Sœurs: Sentiana Djenny, Kessa Guerrier.
+        """
+        try:
+            model = "llama3-70b-8192" if st.session_state.premium else "llama3-8b-8192"
+            res = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "system", "content": sys_info}, {"role": "user", "content": prompt}]
+            )
+            text = res.choices[0].message.content
+            st.markdown(text)
+            if audio_on:
+                parler(text)
+        except:
+            st.error("Connexion serveur perdue.")
