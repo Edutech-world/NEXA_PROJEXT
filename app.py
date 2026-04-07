@@ -1,112 +1,95 @@
 import streamlit as st
-from groq import Groq
+import google.generativeai as genai
 from gtts import gTTS
 import os
 import base64
+from streamlit_google_auth import Authenticate
 
-# --- CONFIGURATION ---
-client = Groq(api_key="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")
-st.set_page_config(page_title="NEXA PRO+ 💎", page_icon="🚀", layout="wide")
+# --- CONFIGURATION API ---
+genai.configure(api_key="AIzaSyDaEaSpHAIMA6ROD8FpS59DsCVpBVnorxo")
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+# --- CONFIGURATION AUTHENTIFICATION GOOGLE ---
+# Note : Pour que cela fonctionne en production, tu dois créer un Client ID sur Google Cloud Console
+auth = Authenticate(
+    secret_token="NEXA_SECRET_TOKEN",
+    cookie_name="nexa_auth",
+    key="nexa_key",
+    cookie_expiry_days=30,
+)
+
+st.set_page_config(page_title="NEXA SUPRÊME", layout="wide")
+
+# --- VÉRIFICATION DE CONNEXION ---
+auth.check_authentification()
+
+# Si l'utilisateur n'est pas connecté, on affiche le bouton Google
+if not st.session_state.get('connected', False):
+    st.markdown("<h1 style='text-align:center;'>Bienvenue sur NEXA</h1>", unsafe_allow_html=True)
+    auth.login()
+    st.stop() # Arrête le code ici tant qu'on n'est pas connecté
+
 # --- INITIALISATION ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "counter" not in st.session_state:
-    st.session_state.counter = 150
+user_email = st.session_state.get('user_info', {}).get('email', 'Utilisateur Inconnu')
+
 if "is_pro" not in st.session_state:
-    st.session_state.is_pro = False 
+    st.session_state.is_pro = False
 
 # --- FONCTION VOIX ---
 def parler(texte):
     try:
-        tts = gTTS(text=texte, lang='fr')
-        tts.save("response.mp3")
-        with open("response.mp3", "rb") as f:
+        tts = gTTS(text=texte[:300], lang='fr')
+        tts.save("voice.mp3")
+        with open("voice.mp3", "rb") as f:
             data = f.read()
             b64 = base64.b64encode(data).decode()
-            md = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}">'
-            st.markdown(md, unsafe_allow_html=True)
-        os.remove("response.mp3")
+            st.markdown(f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}">', unsafe_allow_html=True)
+        os.remove("voice.mp3")
     except: pass
 
-# --- DESIGN CSS ---
-st.markdown("""
-    <style>
-    .stApp { background-color: #0e1117; }
-    .stChatInput input { color: white !important; background-color: #262730 !important; }
-    .main-logo {
-        font-size: 70px; font-weight: 900;
-        background: linear-gradient(45deg, #1e3a8a, #3b82f6);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        text-align: center;
-    }
-    .pro-active-box {
-        background-color: #16a34a; color: white; padding: 10px; 
-        border-radius: 10px; text-align: center; font-weight: bold;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- BARRE LATÉRALE (SIDEBAR) ---
+# --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h1 style='color: #3b82f6; text-align: center;'>NEXA</h1>", unsafe_allow_html=True)
-    st.write(f"*PDG :* ALEJANDRO KARL")
+    st.image("https://www.gstatic.com/images/branding/product/2x/avatar_anonymous_120dp.png", width=50)
+    st.write(f"📧 {user_email}")
     st.divider()
     
-    # Section NEXA PRO+
-    st.subheader("💎 NEXA PRO+")
+    # Section Paiement & Activation
     if not st.session_state.is_pro:
-        st.write("💰 *250 HTG / 3 Mois*")
-        st.info("Payez via MonCash (+509 4769-2489) ou Natcash (+509 4208-7977)")
-        
-        # Le code d'activation client est maintenant 234
-        activation_input = st.text_input("🔑 Code d'activation", type="password")
-        if activation_input == "234":
+        st.subheader("💎 DEVENIR PRO+")
+        st.error("Options Photo/Vidéo Verrouillées")
+        st.write("---")
+        st.write("📲 *PAIEMENT :*")
+        st.write("✅ *MonCash :* +509 4769-2489")
+        st.write("✅ *Natcash :* +509 4208-7977")
+        code_activation = st.text_input("Entrez le code reçu (234)", type="password")
+        if code_activation == "234":
             st.session_state.is_pro = True
-            st.success("Accès PRO+ débloqué !")
+            st.success("Mode PRO+ activé !")
             st.rerun()
-    else:
-        st.markdown("<div class='pro-active-box'>MEMBRE PRO+ ACTIF ✅</div>", unsafe_allow_html=True)
-
-    st.divider()
     
-    # Ton Code Secret Admin (1234)
-    admin_input = st.text_input("⚙️ Admin", type="password")
-    if admin_input == "1234":
-        st.warning(f"📊 Utilisateurs : {st.session_state.counter}")
-        if st.button("Reset Stats"):
-            st.session_state.counter = 0
+    st.divider()
+    # Section Admin (1234)
+    admin_code = st.text_input("⚙️ Accès PDG Karl", type="password")
+    if admin_code == "1234":
+        st.warning("📊 STATISTIQUES NEXA")
+        st.write(f"Dernier utilisateur connecté : {user_email}")
+        st.write("Serveur : Google Cloud / Gemini 1.5")
 
 # --- INTERFACE PRINCIPALE ---
-st.markdown("<div class='main-logo'>NEXA</div>", unsafe_allow_html=True)
+st.markdown(f"<h1 style='text-align:center; color:#4285F4;'>NEXA AI</h1>", unsafe_allow_html=True)
 
-# Affichage des outils de vision si PRO
 if st.session_state.is_pro:
-    st.markdown("### 📸 Espace Multimédia PRO+")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.file_uploader("Analyser une Photo", type=['jpg', 'png', 'jpeg'])
-    with col2:
-        st.file_uploader("Analyser une Vidéo", type=['mp4', 'mov'])
+    st.subheader("📸 Caméra & Analyse Vision")
+    camera = st.camera_input("Scanner un document")
+    if camera:
+        # Code d'analyse Gemini ici...
+        st.write("Analyse en cours...")
 else:
-    st.warning("🔒 Les fonctions Photo et Vidéo sont réservées aux membres PRO+. Activez-les dans le menu.")
+    st.info("Bonjour ! Vous utilisez la version gratuite. Passez en PRO+ pour utiliser la caméra.")
 
-# Chat
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-if prompt := st.chat_input("Pose ta question..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.session_state.counter += 1
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
-        )
-        response = completion.choices[0].message.content
-        st.markdown(response)
-        parler(response)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+# CHAT
+if prompt := st.chat_input("Posez votre question..."):
+    st.chat_message("user").write(prompt)
+    response = model.generate_content(prompt)
+    st.chat_message("assistant").write(response.text)
+    parler(response.text)
