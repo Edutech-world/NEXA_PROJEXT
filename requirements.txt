@@ -1,3 +1,4 @@
-flask
-groq
+streamlit
+google-generativeai
 gTTS
+streamlit-google-auth
