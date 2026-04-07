@@ -3,35 +3,25 @@ import google.generativeai as genai
 from gtts import gTTS
 import os
 import base64
-from streamlit_google_auth import Authenticate
+from PIL import Image
 
-# --- CONFIGURATION API ---
+# --- CONFIGURATION ---
 genai.configure(api_key="AIzaSyDaEaSpHAIMA6ROD8FpS59DsCVpBVnorxo")
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# --- CONFIGURATION AUTHENTIFICATION GOOGLE ---
-# Note : Pour que cela fonctionne en production, tu dois créer un Client ID sur Google Cloud Console
-auth = Authenticate(
-    secret_token="NEXA_SECRET_TOKEN",
-    cookie_name="nexa_auth",
-    key="nexa_key",
-    cookie_expiry_days=30,
-)
+st.set_page_config(page_title="NEXA AI", layout="wide")
 
-st.set_page_config(page_title="NEXA SUPRÊME", layout="wide")
+# --- SYSTÈME DE CONNEXION SIMPLE ---
+if "user_name" not in st.session_state:
+    st.markdown("# 🌐 Bienvenue sur NEXA")
+    name = st.text_input("Entre ton nom ou email pour commencer :")
+    if st.button("Se connecter"):
+        if name:
+            st.session_state.user_name = name
+            st.rerun()
+    st.stop()
 
-# --- VÉRIFICATION DE CONNEXION ---
-auth.check_authentification()
-
-# Si l'utilisateur n'est pas connecté, on affiche le bouton Google
-if not st.session_state.get('connected', False):
-    st.markdown("<h1 style='text-align:center;'>Bienvenue sur NEXA</h1>", unsafe_allow_html=True)
-    auth.login()
-    st.stop() # Arrête le code ici tant qu'on n'est pas connecté
-
-# --- INITIALISATION ---
-user_email = st.session_state.get('user_info', {}).get('email', 'Utilisateur Inconnu')
-
+# --- INITIALISATION PRO ---
 if "is_pro" not in st.session_state:
     st.session_state.is_pro = False
 
@@ -47,48 +37,46 @@ def parler(texte):
         os.remove("voice.mp3")
     except: pass
 
-# --- SIDEBAR ---
+# --- SIDEBAR (ADMIN & PAIEMENT) ---
 with st.sidebar:
-    st.image("https://www.gstatic.com/images/branding/product/2x/avatar_anonymous_120dp.png", width=50)
-    st.write(f"📧 {user_email}")
+    st.title("NEXA 🚀")
+    st.write(f"👤 Utilisateur : *{st.session_state.user_name}*")
     st.divider()
     
-    # Section Paiement & Activation
     if not st.session_state.is_pro:
-        st.subheader("💎 DEVENIR PRO+")
-        st.error("Options Photo/Vidéo Verrouillées")
-        st.write("---")
-        st.write("📲 *PAIEMENT :*")
-        st.write("✅ *MonCash :* +509 4769-2489")
-        st.write("✅ *Natcash :* +509 4208-7977")
-        code_activation = st.text_input("Entrez le code reçu (234)", type="password")
-        if code_activation == "234":
+        st.subheader("💎 NEXA PRO+")
+        st.write("Pour débloquer la *Caméra* et la *Voix* :")
+        st.info("📲 MonCash : +509 4769-2489\n\n📲 Natcash : +509 4208-7977")
+        code = st.text_input("Code d'activation (234)", type="password")
+        if code == "234":
             st.session_state.is_pro = True
-            st.success("Mode PRO+ activé !")
             st.rerun()
-    
+    else:
+        st.success("MODE PRO+ ACTIVÉ ✅")
+
     st.divider()
-    # Section Admin (1234)
-    admin_code = st.text_input("⚙️ Accès PDG Karl", type="password")
-    if admin_code == "1234":
-        st.warning("📊 STATISTIQUES NEXA")
-        st.write(f"Dernier utilisateur connecté : {user_email}")
-        st.write("Serveur : Google Cloud / Gemini 1.5")
+    admin = st.text_input("⚙️ Admin (1234)", type="password")
+    if admin == "1234":
+        st.warning("PANNEAU PDG KARL")
+        st.write(f"Utilisateur actuel : {st.session_state.user_name}")
 
 # --- INTERFACE PRINCIPALE ---
-st.markdown(f"<h1 style='text-align:center; color:#4285F4;'>NEXA AI</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>NEXA AI</h1>", unsafe_allow_html=True)
 
+# CAMÉRA (Affiche le logo uniquement si PRO+)
 if st.session_state.is_pro:
-    st.subheader("📸 Caméra & Analyse Vision")
-    camera = st.camera_input("Scanner un document")
-    if camera:
-        # Code d'analyse Gemini ici...
-        st.write("Analyse en cours...")
+    st.subheader("📸 Vision & Caméra")
+    photo = st.camera_input("Scanner un document")
+    if photo:
+        img = Image.open(photo)
+        response = model.generate_content(["Analyse cette image", img])
+        st.write(response.text)
+        parler(response.text)
 else:
-    st.info("Bonjour ! Vous utilisez la version gratuite. Passez en PRO+ pour utiliser la caméra.")
+    st.warning("🔒 Activez le mode PRO+ pour voir la Caméra.")
 
 # CHAT
-if prompt := st.chat_input("Posez votre question..."):
+if prompt := st.chat_input("Dis quelque chose..."):
     st.chat_message("user").write(prompt)
     response = model.generate_content(prompt)
     st.chat_message("assistant").write(response.text)
