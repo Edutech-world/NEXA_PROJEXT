@@ -5,58 +5,58 @@ import os
 import base64
 from PIL import Image
 
-# --- CONFIGURATION (REMPLACE LLAMA PAR GEMINI) ---
-# On utilise ta clé Google Gemini ici
+# --- CONFIGURATION (FINI GROQ, BIENVENUE GEMINI) ---
 genai.configure(api_key="AIzaSyDaEaSpHAIMA6ROD8FpS59DsCVpBVnorxo")
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.set_page_config(page_title="NEXA AI", layout="wide")
 
-# --- LOGIN & CONTRÔLE ---
+# --- LOGIN OBLIGATOIRE ---
 if "user_email" not in st.session_state:
     st.markdown("<h1 style='text-align: center;'>🌐 Connexion NEXA</h1>", unsafe_allow_html=True)
-    email = st.text_input("Entre ton email :")
-    if st.button("Accéder"):
-        if "@" in email:
-            st.session_state.user_email = email
+    email_input = st.text_input("Entre ton email pour continuer :")
+    if st.button("Se connecter"):
+        if "@" in email_input:
+            st.session_state.user_email = email_input
             st.rerun()
     st.stop()
 
-# --- SIDEBAR (TES NUMÉROS ICI) ---
+# Initialisation
+if "is_pro" not in st.session_state: st.session_state.is_pro = False
+
+# --- BARRE LATÉRALE (TES NUMÉROS ICI) ---
 with st.sidebar:
-    st.title("NEXA PRO 🚀")
-    st.write(f"Email: {st.session_state.user_email}")
+    st.title("NEXA 🚀")
+    st.write(f"👤 {st.session_state.user_email}")
     st.divider()
     
-    if not st.session_state.get("is_pro", False):
-        st.subheader("💰 PAIEMENT ACTIVATION")
-        # Voici tes numéros bien visibles
-        st.info("📲 *MonCash* : +509 4769-2489")
-        st.info("📲 *Natcash* : +509 4208-7977")
+    if not st.session_state.is_pro:
+        st.subheader("💰 ACTIVER NEXA PRO+")
+        st.write("Envoie 250 HTG pour débloquer la caméra :")
+        # TES NUMÉROS SONT ICI
+        st.info("📲 MonCash : +509 4769-2489")
+        st.info("📲 Natcash : +509 4208-7977")
         
-        code = st.text_input("Code (234)", type="password")
-        if code == "234":
+        if st.text_input("Code (234)", type="password") == "234":
             st.session_state.is_pro = True
             st.rerun()
     else:
         st.success("MODE PRO+ ACTIF ✅")
 
-# --- CHAT & VISION ---
-st.markdown("<h1 style='text-align: center;'>NEXA AI</h1>", unsafe_allow_html=True)
+# --- INTERFACE DE CHAT ---
+st.markdown("<h1 style='text-align: center; color: #4285F4;'>NEXA AI</h1>", unsafe_allow_html=True)
 
-if st.session_state.get("is_pro", False):
-    # Caméra uniquement en mode Pro
-    img_file = st.camera_input("Scanner un exercice")
-    if img_file:
-        img = Image.open(img_file)
-        response = model.generate_content(["Analyse cette image", img])
-        st.write(response.text)
+if st.session_state.is_pro:
+    photo = st.camera_input("Scanner un exercice")
+    if photo:
+        img = Image.open(photo)
+        res = model.generate_content(["Analyse cette image", img])
+        st.write(res.text)
 
-# Zone de texte
-prompt = st.chat_input("Pose ta question...")
-if prompt:
-    st.chat_message("user").write(prompt)
-    response = model.generate_content(prompt)
+# Chat Box
+if p := st.chat_input("Pose ta question..."):
+    st.chat_message("user").write(p)
+    response = model.generate_content(p)
     st.chat_message("assistant").write(response.text)
     
     # Voix automatique
