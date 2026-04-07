@@ -4,7 +4,7 @@ import google.generativeai as genai
 from gtts import gTTS
 import os
 import base64
-from PIL import Image
+from PIL import Image 
 
 # --- CONFIGURATION DES CLÉS (AVEC TA NOUVELLE CLÉ GSK) ---
 GROQ_API_KEY = "Gsk_LnsmjxnXqydFPDbeiPHzWGdyb3FY393FRsK6lFtTkwj3RtrRFwOw"
