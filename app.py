@@ -9,7 +9,6 @@ from PIL import Image
 # --- CONFIGURATION DES CLÉS (AVEC TA NOUVELLE CLÉ GSK) ---
 GROQ_API_KEY = "Gsk_LnsmjxnXqydFPDbeiPHzWGdyb3FY393FRsK6lFtTkwj3RtrRFwOw"
 genai.configure(api_key="AIzaSyDaEaSpHAIMA6ROD8FpS59DsCVpBVnorxo")
-
 client = Groq(api_key=GROQ_API_KEY)
 model_vision = genai.GenerativeModel('gemini-1.5-flash')
 
