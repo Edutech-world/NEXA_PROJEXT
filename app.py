@@ -3,7 +3,6 @@ from groq import Groq
 from gtts import gTTS
 import os
 import base64
-
 # --- CONFIGURATION API GROQ ---
 client = Groq(api_key="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")
 
