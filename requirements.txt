@@ -1,4 +1,5 @@
 streamlit
 google-generativeai
 gTTS
-streamlit-google-auth
+pillow
+requests
