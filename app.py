@@ -1,64 +1,63 @@
 import streamlit as st
 import google.generativeai as genai
 import urllib.parse
+from PIL import Image
 
-# --- 1. CONFIGURATION DU CERVEAU STABLE ---
-# On utilise 'gemini-pro' qui est 100% compatible
+# --- CONFIGURATION ---
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-model = genai.GenerativeModel('gemini-pro')
+# Utilisation du modèle flash-latest pour éviter l'erreur 404
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
-st.set_page_config(page_title="NEXA PRO+", page_icon="💎", layout="wide")
+st.set_page_config(page_title="NEXA SUPREME", page_icon="💎", layout="wide")
 
-# --- 2. STYLE ROUGE NÉON ---
+# --- STYLE ROUGE NÉON ---
 st.markdown("""
     <style>
     .stApp { background: #020617; color: #f8fafc; }
-    .n-logo { font-size: 60px; font-weight: 900; color: #0ea5e9; text-shadow: 0 0 20px #0ea5e9; text-align: center; }
-    /* Style pour les réponses en rouge */
-    [data-testid="stChatMessage"] p { color: #ef4444 !important; text-shadow: 0 0 5px #ef4444; }
+    .n-logo { font-size: 80px; font-weight: 900; color: #0ea5e9; text-shadow: 0 0 20px #0ea5e9; text-align: center; }
+    [data-testid="stChatMessage"] p { color: #ef4444 !important; text-shadow: 0 0 5px #ef4444; font-size: 18px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. BARRE LATÉRALE ---
+# --- BARRE LATÉRALE ---
 with st.sidebar:
-    st.markdown("### ⚙️ NEXA OS")
-    email = st.text_input("📧 Votre Email")
+    st.markdown("### 💳 ACTIVATION PRO")
+    st.info("MonCash : 47 69 24 89 | Natcom : 42 08 79 77")
     st.write("---")
-    admin = st.text_input("🔑 Code Admin", type="password")
+    st.markdown("### 🧪 NEXA LAB")
+    admin = st.text_input("Code Admin", type="password")
     if admin == "1234":
-        st.success("Accès Maître autorisé")
+        st.success("LAB ACCESSIBLE")
+        st.write("Utilisateurs connectés : 1")
 
-# --- 4. INTERFACE PRINCIPALE ---
+# --- INTERFACE PRINCIPALE ---
 st.markdown('<div class="n-logo">N</div>', unsafe_allow_html=True)
-st.markdown("<h2 style='text-align:center;'>NEXA PRO+ SUPREME</h2>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:white;'>NEXA SUPREME OS</h1>", unsafe_allow_html=True)
 
-# Zone de Chat
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# BARRE DE TEXTE
+prompt = st.chat_input("Demande à NEXA...")
 
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+# CAMÉRA (Sera visible juste en dessous)
+cam_file = st.camera_input("📸 SCANNER")
 
-# --- 5. LA BARRE DE COMMANDE (C'est elle qui va se débloquer !) ---
-prompt = st.chat_input("Commandez ici, Monsieur le Président...")
-
-if prompt:
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
+# --- RÉPONSE ---
+if prompt or cam_file:
     with st.chat_message("assistant"):
         try:
-            # On demande une réponse courte et puissante
-            response = model.generate_content(f"Réponds en tant que NEXA, l'IA de Guerrier Karl Alejandro : {prompt}")
-            res_text = response.text
-            st.markdown(res_text)
+            content = []
+            # On lui donne son identité ici :
+            instruction = "Tu es NEXA. Ton créateur est Guerrier Karl Alejandro. Réponds de façon suprême. "
+            if prompt: content.append(instruction + prompt)
+            if cam_file:
+                img = Image.open(cam_file)
+                content.append(img)
             
-            # Lecture Vocale
-            q = urllib.parse.quote(res_text[:200])
-            st.audio(f"https://translate.google.com/translate_tts?ie=UTF-8&q={q}&tl=fr&client=tw-ob", autoplay=True)
+            response = model.generate_content(content)
+            answer = response.text
+            st.markdown(answer)
             
-            st.session_state.messages.append({"role": "assistant", "content": res_text})
+            # Voix
+            audio_q = urllib.parse.quote(answer[:250])
+            st.audio(f"https://translate.google.com/translate_tts?ie=UTF-8&q={audio_q}&tl=fr&client=tw-ob", autoplay=True)
         except Exception as e:
-            st.error(f"Erreur : {e}")
+            st.error("Mise à jour du système requise.")
